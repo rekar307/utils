@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="title">
-     <string>File Information</string>
+     <string>File Info.</string>
     </property>
     <widget class="QPushButton" name="pushButton_tar">
      <property name="geometry">
@@ -97,23 +97,10 @@
       <string>Compare</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_apply">
-     <property name="geometry">
-      <rect>
-       <x>140</x>
-       <y>80</y>
-       <width>121</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Apply</string>
-     </property>
-    </widget>
     <widget class="QPushButton" name="pushButton_clear">
      <property name="geometry">
       <rect>
-       <x>270</x>
+       <x>360</x>
        <y>80</y>
        <width>121</width>
        <height>23</height>
@@ -123,10 +110,10 @@
       <string>Clear</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_clear_2">
+    <widget class="QPushButton" name="pushButton_save">
      <property name="geometry">
       <rect>
-       <x>400</x>
+       <x>490</x>
        <y>80</y>
        <width>121</width>
        <height>23</height>

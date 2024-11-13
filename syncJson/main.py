@@ -7,20 +7,22 @@ import pandas as pd
 import json
 
 form_class = uic.loadUiType("sync_json.ui")[0]
+app_name = "Sync Json Manager"
+version = " ver. 1.0.0"
 
 
 class WindowClass(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.setWindowTitle(app_name + version)  # 프로그램 이름 설정
         self.initUI()
         self.json_src = {}
         self.json_tar = {}
-        self.df = pd.DataFrame(columns=["Key", "Value"])
+        self.df = None
 
     def initUI(self):
         # Buttons
-        self.pushButton_apply.clicked.connect(lambda: self.apply())
         self.pushButton_clear.clicked.connect(lambda: self.clear())
         self.pushButton_save.clicked.connect(lambda: self.saveHandler())
         self.pushButton_cmp.clicked.connect(lambda: self.compare())
@@ -39,8 +41,8 @@ class WindowClass(QMainWindow, form_class):
         self.actionExit.triggered.connect(self.close)
 
         # tableWidget
-        self.tableWidget_cmp.setColumnCount(2)  # 두 개의 컬럼을 설정 (Key, Value)
-        self.tableWidget_cmp.setHorizontalHeaderLabels(["Key", "Value"])
+        self.tableWidget_cmp.setColumnCount(3)  # 두 개의 컬럼을 설정 (Key, Value)
+        self.tableWidget_cmp.setHorizontalHeaderLabels(["Key", "Before", "After"])
         self.tableWidget_cmp.clear()
 
     def openFileHandler(self, label):
@@ -55,57 +57,88 @@ class WindowClass(QMainWindow, form_class):
         )
         return file_path
 
-    def update_common_keys(self, src, tar):
-        # 이 함수에서 DataFrame에 데이터를 추가
-        for key, value in src.items():
-            if key in tar:
-                if isinstance(value, dict) and isinstance(tar[key], dict):
-                    self.update_common_keys(value, tar[key])  # 재귀적으로 비교
-                else:
-                    # DataFrame에 key와 value 추가
-                    self.df = self.df.append(
-                        {"Key": key, "Value": value}, ignore_index=True
-                    )
-                    tar[key] = value  # 값을 덮어쓰기
-        return tar
+    def saveFileDialog(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save JSON File",
+            "",
+            "JSON Files (*.json);;All Files (*)",
+            options=options,
+        )
+        return file_path
 
-    def apply(self):
-        pass
+    def update_common_keys(self, src, tar, df=None):
+        # Initialize df only if it's the top-level call
+        if self.df is None:
+            self.df = pd.DataFrame(columns=["Key", "Before", "After"])
+
+        try:
+            for key, value in src.items():
+                if key in tar:
+                    if isinstance(value, dict) and isinstance(tar[key], dict):
+                        # Recursive call with df passed along to accumulate results
+                        self.update_common_keys(value, tar[key], df)
+                    else:
+                        # Append the change to df
+                        self.df = pd.concat(
+                            [
+                                self.df,
+                                pd.DataFrame(
+                                    [{"Key": key, "Before": tar[key], "After": value}]
+                                ),
+                            ],
+                            ignore_index=True,
+                        )
+                        print(f"Match: {key}: {tar[key]} -> {value}")
+                        tar[key] = value  # Update target value
+        except Exception as e:
+            print(f"Exception occurred: {e}")
 
     def clear(self):
         self.label_src.setText("")
         self.label_tar.setText("")
         self.tableWidget_cmp.clear()
-        self.df.reset()
+        self.df.drop(self.df.index, inplace=True)
         self.json_src = []
         self.json_tar = []
 
     def saveHandler(self):
-        path = self.openFileDialog()
-        if path:
-            pass
+        path = self.saveFileDialog()
+        with open(path, "w") as outfile:
+            json.dump(self.json_tar, outfile, indent=4)
 
     def compare(self):
         self.load_json_to_dict()
-        # updated_data = self.update_common_keys(self.json_src, self.json_tar)
-        # print(json.dumps(updated_data, indent=4))
-        # self.display_table()
-        with open("self.label_src") as f:
-            data = json.load(f)
-        df = json_normalize(data, "products", ["store_info"])
-        print(df)
+        self.update_common_keys(self.json_src, self.json_tar)
+        self.display_table()
 
     def display_table(self):
-        # pandas DataFrame에서 QTableWidget으로 데이터 추가
-        self.tableWidget_cmp.setRowCount(0)  # 기존 데이터 초기화
-        for i in range(len(self.df)):
-            self.tableWidget_cmp.insertRow(i)
-            self.tableWidget_cmp.setItem(
-                i, 0, QTableWidgetItem(str(self.df.at[i, "Key"]))
-            )  # Key
-            self.tableWidget_cmp.setItem(
-                i, 1, QTableWidgetItem(str(self.df.at[i, "Value"]))
-            )  # Value
+        self.tableWidget_cmp.setRowCount(0)  # reset
+        self.tableWidget_cmp.setHorizontalHeaderLabels(
+            ["TuneKey Name", "Before Value", "After Value"]
+        )
+
+        if self.df is not None:
+            for i in range(len(self.df)):
+                self.tableWidget_cmp.insertRow(i)
+
+                # Key Column
+                item_key = QTableWidgetItem(str(self.df.at[i, "Key"]))
+                item_key.setTextAlignment(Qt.AlignRight)
+                self.tableWidget_cmp.setItem(i, 0, item_key)
+
+                # Before Column
+                item_before = QTableWidgetItem(str(self.df.at[i, "Before"]))
+                item_before.setTextAlignment(Qt.AlignRight)
+                self.tableWidget_cmp.setItem(i, 1, item_before)
+
+                # After Column
+                item_after = QTableWidgetItem(str(self.df.at[i, "After"]))
+                item_after.setTextAlignment(Qt.AlignRight)
+                self.tableWidget_cmp.setItem(i, 2, item_after)
+        else:
+            print("dataframe is None!")
 
     def load_json_to_dict(self):
         with open(self.label_src.text(), "r") as src_file:
