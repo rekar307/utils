@@ -1,0 +1,11 @@
+{
+  "name": "Bob",
+  "details": {
+    "age": 30,
+    "location": "Townsville",
+    "hobby": "cycling"
+  },
+  "preferences": {
+    "color": "red"
+  }
+}
