@@ -41,9 +41,12 @@ class WindowClass(QMainWindow, form_class):
         self.actionExit.triggered.connect(self.close)
 
         # tableWidget
-        self.tableWidget_cmp.setColumnCount(3)  # 두 개의 컬럼을 설정 (Key, Value)
-        self.tableWidget_cmp.setHorizontalHeaderLabels(["Key", "Before", "After"])
+        self.tableWidget_cmp.setColumnCount(4)
+        self.tableWidget_cmp.setHorizontalHeaderLabels(
+            ["Key", "Before", "After", "Apply"]
+        )
         self.tableWidget_cmp.clear()
+        self.tableWidget_cmp.cellChanged.connect(self.on_cell_changed)
 
     def openFileHandler(self, label):
         file_path = self.openFileDialog()
@@ -69,10 +72,6 @@ class WindowClass(QMainWindow, form_class):
         return file_path
 
     def update_common_keys(self, src, tar, df=None):
-        # Initialize df only if it's the top-level call
-        if self.df is None:
-            self.df = pd.DataFrame(columns=["Key", "Before", "After"])
-
         try:
             for key, value in src.items():
                 if key in tar:
@@ -85,7 +84,14 @@ class WindowClass(QMainWindow, form_class):
                             [
                                 self.df,
                                 pd.DataFrame(
-                                    [{"Key": key, "Before": tar[key], "After": value}]
+                                    [
+                                        {
+                                            "Key": key,
+                                            "Before": tar[key],
+                                            "After": value,
+                                            "Apply": True,
+                                        }
+                                    ]
                                 ),
                             ],
                             ignore_index=True,
@@ -110,13 +116,17 @@ class WindowClass(QMainWindow, form_class):
 
     def compare(self):
         self.load_json_to_dict()
+
+        self.df = pd.DataFrame(columns=["Key", "Before", "After", "Apply"])
         self.update_common_keys(self.json_src, self.json_tar)
+
+        self.tableWidget_cmp.clear()
         self.display_table()
 
     def display_table(self):
         self.tableWidget_cmp.setRowCount(0)  # reset
         self.tableWidget_cmp.setHorizontalHeaderLabels(
-            ["TuneKey Name", "Before Value", "After Value"]
+            ["TuneKey Name", "Before Value", "After Value", "Apply"]
         )
 
         if self.df is not None:
@@ -125,20 +135,45 @@ class WindowClass(QMainWindow, form_class):
 
                 # Key Column
                 item_key = QTableWidgetItem(str(self.df.at[i, "Key"]))
-                item_key.setTextAlignment(Qt.AlignRight)
+                item_key.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 self.tableWidget_cmp.setItem(i, 0, item_key)
 
                 # Before Column
                 item_before = QTableWidgetItem(str(self.df.at[i, "Before"]))
-                item_before.setTextAlignment(Qt.AlignRight)
+                item_before.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 self.tableWidget_cmp.setItem(i, 1, item_before)
 
                 # After Column
                 item_after = QTableWidgetItem(str(self.df.at[i, "After"]))
-                item_after.setTextAlignment(Qt.AlignRight)
+                item_after.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 self.tableWidget_cmp.setItem(i, 2, item_after)
+
+                # Checkbox Column
+                checkbox = QCheckBox()
+                checkbox.setChecked(bool(self.df.at[i, "Apply"]))
+                widget = QWidget()
+                layout = QHBoxLayout(widget)
+                layout.addWidget(checkbox)
+                layout.setAlignment(Qt.AlignCenter)
+                layout.setContentsMargins(0, 0, 0, 0)
+                self.tableWidget_cmp.setCellWidget(i, 3, widget)
         else:
             print("dataframe is None!")
+
+    def is_checkbox_checked(self, row):
+        checkbox_widget = self.tableWidget_cmp.cellWidget(
+            row, 3
+        )  # 3번 열이 체크박스 열이라고 가정
+        if checkbox_widget is not None:
+            checkbox = checkbox_widget.layout().itemAt(0).widget()
+            if checkbox is not None:
+                return checkbox.isChecked()
+        return False
+
+    def on_cell_changed(self, row, column):
+        item = self.tableWidget_cmp.item(row, column)
+        if item is not None:
+            print(f"Cell ({row}, {column}) changed to: {item.text()}")
 
     def load_json_to_dict(self):
         with open(self.label_src.text(), "r") as src_file:

@@ -1,11 +1,25 @@
 {
-  "name": "Alice",
-  "details": {
-    "age": 25,
-    "location": "Cityville"
-  },
-  "preferences": {
-    "color": "blue",
-    "food": "pizza"
-  }
+    "name": "Alice",
+    "details": {
+        "age": 25,
+        "location": "Cityville",
+        "arr": [
+            [
+                11,
+                22,
+                33,
+                44
+            ],
+            [
+                44,
+                55,
+                66,
+                77
+            ]
+        ]
+    },
+    "preferences": {
+        "color": "blue",
+        "food": "pizza"
+    }
 }
